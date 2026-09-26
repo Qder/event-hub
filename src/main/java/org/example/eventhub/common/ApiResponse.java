@@ -1,43 +1,61 @@
 package org.example.eventhub.common;
 
-public class ApiResponse implements java.io.Serializable {
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 统一响应结构
+ * code = 0 表示成功，非 0 表示失败
+ */
+@Data
+public class ApiResponse<T> implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    private int code;
+    /** 业务状态码，0 表示成功 */
+    private Integer code;
+
+    /** 提示信息 */
     private String message;
-    private Object data;
 
-    public ApiResponse() {
-    }
+    /** 返回数据 */
+    private T data;
 
-    public ApiResponse(int code, String message, Object data) {
+    /** 构造器私有，只允许通过静态方法创建 */
+    private ApiResponse(Integer code, String message, T data) {
         this.code = code;
         this.message = message;
         this.data = data;
     }
 
-    public int getCode() {
-        return code;
+    // ---------- 成功 ----------
+
+    public static <T> ApiResponse<T> success() {
+        return new ApiResponse<>(ErrorCode.SUCCESS.getCode(),
+                ErrorCode.SUCCESS.getMessage(), null);
     }
 
-    public void setCode(int code) {
-        this.code = code;
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(ErrorCode.SUCCESS.getCode(),
+                ErrorCode.SUCCESS.getMessage(), data);
     }
 
-    public String getMessage() {
-        return message;
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>(ErrorCode.SUCCESS.getCode(), message, data);
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    // ---------- 失败 ----------
+
+    public static <T> ApiResponse<T> fail(Integer code, String message) {
+        return new ApiResponse<>(code, message, null);
     }
 
-    public Object getData() {
-        return data;
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode) {
+        return new ApiResponse<>(errorCode.getCode(), errorCode.getMessage(), null);
     }
 
-    public void setData(Object data) {
-        this.data = data;
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode, String message) {
+        return new ApiResponse<>(errorCode.getCode(), message, null);
     }
-
 }

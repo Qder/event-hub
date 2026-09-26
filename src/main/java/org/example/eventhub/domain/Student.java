@@ -14,7 +14,6 @@ public class Student implements Serializable {
     @TableId(type= IdType.AUTO)
     private Long id;
     private String name;
-    private Integer age;
     private String studentNo;
     private String phone;
     private int status;
@@ -24,7 +23,6 @@ public class Student implements Serializable {
     public Student() {
         this.id = id;
         this.name = name;
-        this.age = age;
         this.studentNo = studentNo;
         this.phone = phone;
         this.status = status;
