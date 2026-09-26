@@ -4,7 +4,6 @@ package org.example.eventhub.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.ibatis.annotations.Mapper;
 import org.example.eventhub.common.ApiResponse;
 import org.example.eventhub.domain.Student;
 import org.example.eventhub.dto.StudentCreateRequest;
