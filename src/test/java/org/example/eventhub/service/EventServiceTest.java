@@ -1,4 +1,4 @@
-package org.example.eventhub.Service;
+package org.example.eventhub.service;
 
 import org.example.eventhub.common.BusinessException;
 import org.example.eventhub.domain.Event;

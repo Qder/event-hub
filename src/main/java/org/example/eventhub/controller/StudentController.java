@@ -8,8 +8,12 @@ import org.example.eventhub.common.ApiResponse;
 import org.example.eventhub.domain.Student;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
+import org.example.eventhub.service.RegistrationService;
 import org.example.eventhub.service.StudentService;
+import org.example.eventhub.vo.StudentRegistrationVO;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/students")
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class StudentController {
 
     private final StudentService studentService;
+    private final RegistrationService registrationService;
 
     //创建学生
     @PostMapping
@@ -57,5 +62,10 @@ public class StudentController {
     public ApiResponse<Page<Student>> pageStudents(@Valid StudentQueryRequest request) {
         //调用service层的分页查询学生方法
         return ApiResponse.success(studentService.pageStudents(request));
+    }
+
+    @GetMapping("/{id}/registrations")
+    public ApiResponse<List<StudentRegistrationVO>> registrations(@PathVariable Long id) {
+        return ApiResponse.success(registrationService.getStudentRegistrationHistory(id));
     }
 }

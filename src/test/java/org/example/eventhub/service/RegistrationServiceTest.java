@@ -1,13 +1,18 @@
-package org.example.eventhub.Service;
+package org.example.eventhub.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.example.eventhub.common.BusinessException;
 import org.example.eventhub.domain.Event;
 import org.example.eventhub.domain.Registration;
 import org.example.eventhub.dto.EventCreateRequest;
+import org.example.eventhub.dto.RegistrationQueryRequest;
 import org.example.eventhub.dto.StudentCreateRequest;
+import org.example.eventhub.mapper.EventMapper;
 import org.example.eventhub.service.EventService;
 import org.example.eventhub.service.RegistrationService;
 import org.example.eventhub.service.StudentService;
+import org.example.eventhub.vo.EventStatisticsVO;
+import org.example.eventhub.vo.RegistrationDetailVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +31,7 @@ class RegistrationServiceTest {
     @Autowired private RegistrationService registrationService;
     @Autowired private StudentService studentService;
     @Autowired private EventService eventService;
+    @Autowired private EventMapper eventMapper;
 
     private Long createStudent() {
         StudentCreateRequest req = new StudentCreateRequest();
@@ -169,5 +175,135 @@ class RegistrationServiceTest {
         req.setPhone("13800000000");
         req.setStatus(status);
         return req;
+    }
+
+    @Test
+    void checkIn_success() {
+        // 1. 创建活动：开始时间是 5 分钟前（已进入签到窗口）
+        EventCreateRequest req = new EventCreateRequest();
+        req.setTitle("签到测试");
+        req.setCategory("讲座");
+        req.setLocation("A101");
+        req.setStartTime(LocalDateTime.now().minusMinutes(5));
+        req.setEndTime(LocalDateTime.now().plusHours(1));
+        req.setCapacity(10);
+        Long eventId = eventService.createEvent(req);
+        eventService.publishEvent(eventId);
+
+        // 2. 直接造学生
+        Long studentId = createStudent();
+
+        // 3. 直接写报名记录，绕过 register 的"活动未开始"检查
+        Registration registration = new Registration();
+        registration.setEventId(eventId);
+        registration.setStudentId(studentId);
+        registration.setStatus("REGISTERED");
+        registration.setRegisteredAt(LocalDateTime.now());
+        registration.setVersion(0);
+        registrationService.save(registration);
+        Long regId = registration.getId();
+
+        // 4. 手动扣一个名额，保持数据一致
+        eventMapper.decreaseAvailableSlots(eventId);
+
+        // 5. 签到
+        registrationService.checkIn(regId);
+
+        Registration reg = registrationService.getById(regId);
+        assertThat(reg.getStatus()).isEqualTo("CHECKED_IN");
+        assertThat(reg.getCheckedInAt()).isNotNull();
+    }
+
+    @Test
+    void checkIn_duplicated_shouldThrow() {
+        // 同上：直接构造"已报名 + 活动已开始"的数据
+        EventCreateRequest req = new EventCreateRequest();
+        req.setTitle("签到测试");
+        req.setCategory("讲座");
+        req.setLocation("A101");
+        req.setStartTime(LocalDateTime.now().minusMinutes(5));
+        req.setEndTime(LocalDateTime.now().plusHours(1));
+        req.setCapacity(10);
+        Long eventId = eventService.createEvent(req);
+        eventService.publishEvent(eventId);
+
+        Long studentId = createStudent();
+
+        Registration registration = new Registration();
+        registration.setEventId(eventId);
+        registration.setStudentId(studentId);
+        registration.setStatus("REGISTERED");
+        registration.setRegisteredAt(LocalDateTime.now());
+        registration.setVersion(0);
+        registrationService.save(registration);
+        Long regId = registration.getId();
+
+        eventMapper.decreaseAvailableSlots(eventId);
+
+        registrationService.checkIn(regId);
+
+        // 第二次签到应该失败
+        assertThatThrownBy(() -> registrationService.checkIn(regId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("签到");
+    }
+
+    @Test
+    void pageRegistrationDetails_shouldFilterByKeyword() {
+        Long eventId = createPublishedEvent(10);
+        Long s1 = createStudent();
+        Long s2 = createStudent();
+        registrationService.register(eventId, s1);
+        registrationService.register(eventId, s2);
+
+        RegistrationQueryRequest req = new RegistrationQueryRequest();
+        req.setKeyword("测试"); // 两个学生都叫"测试学生"
+        req.setPageNum(1);
+        req.setPageSize(10);
+
+        IPage<RegistrationDetailVO> page =
+                registrationService.pageRegistrationDetails(eventId, req);
+
+        assertThat(page.getTotal()).isEqualTo(2);
+        assertThat(page.getRecords()).allMatch(vo -> vo.getEventTitle() != null);
+        assertThat(page.getRecords()).allMatch(vo -> vo.getStudentName() != null);
+    }
+
+    @Test
+    void pageRegistrationDetails_cancelledExcludedByStatus() {
+        Long eventId = createPublishedEvent(10);
+        Long s1 = createStudent();
+        Long s2 = createStudent();
+        Long r1 = registrationService.register(eventId, s1);
+        registrationService.register(eventId, s2);
+        registrationService.cancel(r1);
+
+        RegistrationQueryRequest req = new RegistrationQueryRequest();
+        req.setStatus("REGISTERED");
+
+        IPage<RegistrationDetailVO> page =
+                registrationService.pageRegistrationDetails(eventId, req);
+
+        assertThat(page.getTotal()).isEqualTo(1);
+    }
+
+    @Test
+    void getEventStatistics_shouldAggregate() {
+        Long eventId = createPublishedEvent(10);
+        Long s1 = createStudent();
+        Long s2 = createStudent();
+        Long s3 = createStudent();
+        Long r1 = registrationService.register(eventId, s1);
+        registrationService.register(eventId, s2);
+        registrationService.register(eventId, s3);
+        registrationService.cancel(r1);
+
+        EventStatisticsVO vo = registrationService.getEventStatistics(eventId);
+
+        assertThat(vo.getTotalRegistrationCount()).isEqualTo(3);
+        assertThat(vo.getActiveRegistrationCount()).isEqualTo(2);
+        assertThat(vo.getCancelledCount()).isEqualTo(1);
+        assertThat(vo.getCheckedInCount()).isZero();
+        assertThat(vo.getCheckInRate()).isZero();
     }
 }

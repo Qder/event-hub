@@ -1,5 +1,7 @@
 package org.example.eventhub.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.example.eventhub.common.BusinessException;
@@ -7,14 +9,19 @@ import org.example.eventhub.common.ErrorCode;
 import org.example.eventhub.domain.Event;
 import org.example.eventhub.domain.Registration;
 import org.example.eventhub.domain.Student;
+import org.example.eventhub.dto.RegistrationQueryRequest;
 import org.example.eventhub.mapper.EventMapper;
 import org.example.eventhub.mapper.RegistrationMapper;
 import org.example.eventhub.mapper.StudentMapper;
 import org.example.eventhub.service.RegistrationService;
+import org.example.eventhub.vo.EventStatisticsVO;
+import org.example.eventhub.vo.RegistrationDetailVO;
+import org.example.eventhub.vo.StudentRegistrationVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -109,5 +116,65 @@ public class RegistrationServiceImpl
             // 归还失败通常意味着数据不一致，抛异常让事务回滚
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "归还名额失败");
         }
+    }
+
+    @Override
+    public void checkIn(Long registrationId) {
+        //检查报名记录
+        Registration registration = this.getById(registrationId);
+        if (registration == null) {
+
+            throw new BusinessException(ErrorCode.REGISTRATION_NOT_FOUND);
+        }
+
+        //检查状态是否是可以报名状态
+        if(!STATUS_REGISTERED.equals(registration.getStatus()))
+        {
+            throw new BusinessException(ErrorCode.REGISTRATION_STATUS_ILLEGAL, "只有 REGISTERED 状态可以签到");
+        }
+
+        //检查时间是否符合开始前30分钟，后分钟
+        Event event = eventMapper.selectById(registration.getEventId());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime windowStart = event.getStartTime().minusMinutes(30);
+        LocalDateTime windowEnd = event.getStartTime().plusMinutes(60);
+        if (now.isBefore(windowStart) || now.isAfter(windowEnd)) {
+            throw new BusinessException(ErrorCode.CHECK_IN_TIME_INVALID);
+        }
+
+        //原子更新签到状态
+        int affected = baseMapper.checkInRegistration(registrationId);
+        if (affected == 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "签到失败，可能已被其他人签到");
+        }
+    }
+
+    @Override
+    public IPage<RegistrationDetailVO> pageRegistrationDetails(Long eventId, RegistrationQueryRequest request) {
+        // 先确认活动存在
+        if (eventMapper.selectById(eventId) == null) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_FOUND);
+        }
+        Page<RegistrationDetailVO> page = new Page<>(
+                request.getPageNum() == null ? 1 : request.getPageNum(),
+                request.getPageSize() == null ? 10 : Math.min(request.getPageSize(), 100));
+        return baseMapper.selectRegistrationDetails(page, eventId, request);
+    }
+
+    @Override
+    public List<StudentRegistrationVO> getStudentRegistrationHistory(Long studentId) {
+        if (studentMapper.selectById(studentId) == null) {
+            throw new BusinessException(ErrorCode.STUDENT_NOT_FOUND);
+        }
+        return baseMapper.selectStudentRegistrationHistory(studentId);
+    }
+
+    @Override
+    public EventStatisticsVO getEventStatistics(Long eventId) {
+        EventStatisticsVO vo = baseMapper.selectEventStatistics(eventId);
+        if (vo == null) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_FOUND);
+        }
+        return vo;
     }
 }

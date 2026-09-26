@@ -1,4 +1,4 @@
-package org.example.eventhub.Service;
+package org.example.eventhub.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.eventhub.common.BusinessException;
