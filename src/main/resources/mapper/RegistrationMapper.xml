@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.eventhub.mapper.RegistrationMapper">
+
+    <!-- 报名名单分页 -->
+    <select id="selectRegistrationDetails"
+            resultType="org.example.eventhub.vo.RegistrationDetailVO">
+        SELECT
+        r.id            AS registrationId,
+        r.event_id      AS eventId,
+        e.title         AS eventTitle,
+        r.student_id    AS studentId,
+        s.name          AS studentName,
+        s.student_no    AS studentNo,
+        r.status        AS status,
+        r.registered_at AS registeredAt,
+        r.cancelled_at  AS cancelledAt,
+        r.checked_in_at AS checkedInAt
+        FROM registration r
+        INNER JOIN student s ON s.id = r.student_id AND s.deleted = 0
+        INNER JOIN event   e ON e.id = r.event_id   AND e.deleted = 0
+        WHERE r.event_id = #{eventId}
+        <if test="req.keyword != null and req.keyword != ''">
+            AND (s.name LIKE CONCAT('%', #{req.keyword}, '%')
+            OR s.student_no LIKE CONCAT('%', #{req.keyword}, '%'))
+        </if>
+        <if test="req.status != null and req.status != ''">
+            AND r.status = #{req.status}
+        </if>
+        <if test="req.checkedIn != null">
+            <choose>
+                <when test="req.checkedIn">
+                    AND r.status = 'CHECKED_IN'
+                </when>
+                <otherwise>
+                    AND r.status != 'CHECKED_IN'
+                </otherwise>
+            </choose>
+        </if>
+        ORDER BY r.registered_at DESC
+    </select>
+
+    <!-- 学生报名历史 -->
+    <select id="selectStudentRegistrationHistory"
+            resultType="org.example.eventhub.vo.StudentRegistrationVO">
+        SELECT
+            r.id            AS registrationId,
+            r.event_id      AS eventId,
+            e.title         AS eventTitle,
+            e.category      AS category,
+            e.location      AS location,
+            e.start_time    AS eventStartTime,
+            e.end_time      AS eventEndTime,
+            r.status        AS status,
+            r.registered_at AS registeredAt
+        FROM registration r
+                 INNER JOIN event e ON e.id = r.event_id AND e.deleted = 0
+        WHERE r.student_id = #{studentId}
+        ORDER BY r.registered_at DESC
+    </select>
+
+    <!-- 活动统计 -->
+    <select id="selectEventStatistics"
+            resultType="org.example.eventhub.vo.EventStatisticsVO">
+        SELECT
+            e.id                AS eventId,
+            e.title             AS eventTitle,
+            e.capacity          AS capacity,
+            e.available_slots   AS availableSlots,
+            COUNT(r.id)                                             AS totalRegistrationCount,
+            SUM(CASE WHEN r.status IN ('REGISTERED','CHECKED_IN') THEN 1 ELSE 0 END)
+                AS activeRegistrationCount,
+            SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelledCount,
+            SUM(CASE WHEN r.status = 'CHECKED_IN' THEN 1 ELSE 0 END) AS checkedInCount,
+            ROUND(
+                    SUM(CASE WHEN r.status = 'CHECKED_IN' THEN 1 ELSE 0 END) * 1.0
+                        / NULLIF(SUM(CASE WHEN r.status IN ('REGISTERED','CHECKED_IN') THEN 1 ELSE 0 END), 0)
+                , 4)                                                     AS checkInRate
+        FROM event e
+                 LEFT JOIN registration r ON r.event_id = e.id
+        WHERE e.id = #{eventId} AND e.deleted = 0
+        GROUP BY e.id, e.title, e.capacity, e.available_slots
+    </select>
+
+</mapper>
