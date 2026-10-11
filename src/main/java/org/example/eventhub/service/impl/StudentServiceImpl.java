@@ -7,11 +7,14 @@ import lombok.RequiredArgsConstructor;
 import org.example.eventhub.common.BusinessException;
 import org.example.eventhub.common.ErrorCode;
 import org.example.eventhub.domain.Student;
+import org.example.eventhub.dto.LoginRequest;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
 import org.example.eventhub.dto.StudentUpdateRequest;
 import org.example.eventhub.mapper.StudentMapper;
 import org.example.eventhub.service.StudentService;
+import org.example.eventhub.util.JwtUtil;
+import org.example.eventhub.vo.LoginResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -135,5 +138,36 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
 
         // 4. 分页
         return this.page(new Page<>(pageNum, pageSize), wrapper);
+    }
+
+    private final JwtUtil jwtUtil;
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+        // 1. 按学号查学生
+        Student student = this.lambdaQuery()
+                .eq(Student::getStudentNo, request.getStudentNo())
+                .one();
+
+        // 2. 学号不存在 → 统一错误码
+        if (student == null) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        // 3. 密码校验
+        if (student.getPassword() == null
+                || !passwordEncoder.matches(request.getPassword(), student.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        // 4. 学生被停用
+        if (student.getStatus() == 0 || student.getStatus() != 1) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        // 5. 生成 token
+        String token = jwtUtil.generateToken(student.getId(), student.getStudentNo());
+
+        return new LoginResponse(token, student.getId(), student.getStudentNo(), student.getName());
     }
 }

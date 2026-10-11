@@ -25,6 +25,7 @@ public enum ErrorCode {
     STUDENT_NOT_FOUND(1001, "学生不存在"),
     STUDENT_DISABLED(1002, "学生已被停用"),
     STUDENT_NO_DUPLICATED(1003, "学号已存在"),
+    LOGIN_FAILED(1004, "学号或密码错误"),
 
     // ---------- 活动 2xxx ----------
     EVENT_NOT_FOUND(2001, "活动不存在"),
