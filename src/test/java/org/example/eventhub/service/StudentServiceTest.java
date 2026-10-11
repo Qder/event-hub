@@ -9,6 +9,7 @@ import org.example.eventhub.service.StudentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +21,8 @@ class StudentServiceTest {
 
     @Autowired
     private StudentService studentService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private StudentCreateRequest buildRequest(String no, String name) {
         StudentCreateRequest req = new StudentCreateRequest();
@@ -70,5 +73,40 @@ class StudentServiceTest {
         Page<Student> page = studentService.pageStudents(query);
         assertThat(page.getTotal()).isGreaterThanOrEqualTo(1);
         assertThat(page.getRecords()).allMatch(s -> s.getName().contains("赵"));
+    }
+
+    @Test
+    //测试密码加密
+    void createStudent_shouldStoreHashedPassword() {
+        Long id = studentService.createStudent(buildRequest("PTEST001", "密码测试"));
+
+        Student student = studentService.getById(id);
+
+        // 数据库里存的不是明文
+        assertThat(student.getPassword()).isNotEqualTo("123456");
+        // 是 BCrypt 哈希
+        assertThat(student.getPassword()).startsWith("$2a$");
+        assertThat(student.getPassword()).hasSize(60);
+        // 能校验通过
+        assertThat(passwordEncoder.matches("123456", student.getPassword())).isTrue();
+    }
+
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Test
+    void serializeStudent_shouldNotContainPassword() throws Exception {
+        Student student = new Student();
+        student.setStudentNo("T001");
+        student.setName("张三");
+        student.setPassword("$2a$10$abcdefg");
+
+        String json = objectMapper.writeValueAsString(student);
+
+        System.out.println("序列化结果: " + json);
+
+        // JSON 里不应该有 password 字段
+        assertThat(json).doesNotContain("password");
+        assertThat(json).doesNotContain("$2a$");
     }
 }

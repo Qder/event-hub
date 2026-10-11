@@ -118,6 +118,7 @@ public class RegistrationServiceImpl
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void checkIn(Long registrationId) {
         //检查报名记录
@@ -140,6 +141,10 @@ public class RegistrationServiceImpl
         LocalDateTime windowEnd = event.getStartTime().plusMinutes(60);
         if (now.isBefore(windowStart) || now.isAfter(windowEnd)) {
             throw new BusinessException(ErrorCode.CHECK_IN_TIME_INVALID);
+        }
+
+        if (event == null) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_FOUND);
         }
 
         //原子更新签到状态

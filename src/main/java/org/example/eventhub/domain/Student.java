@@ -1,6 +1,7 @@
 package org.example.eventhub.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,6 +18,9 @@ public class Student implements Serializable {
     private String studentNo;
     private String phone;
     private int status;
+    //防止密码泄露，返回给前端时不显示密码
+    @JsonIgnore
+    private String password;
     @TableLogic
     private int deleted;
 

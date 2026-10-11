@@ -8,6 +8,7 @@ import org.example.eventhub.common.ApiResponse;
 import org.example.eventhub.domain.Student;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
+import org.example.eventhub.dto.StudentUpdateRequest;
 import org.example.eventhub.service.RegistrationService;
 import org.example.eventhub.service.StudentService;
 import org.example.eventhub.vo.StudentRegistrationVO;
@@ -43,7 +44,7 @@ public class StudentController {
 
     //更新学生
     @PutMapping("{id}")
-    public ApiResponse<Void> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentCreateRequest request) {
+    public ApiResponse<Void> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentUpdateRequest request) {
         //调用service层的更新学生方法
         studentService.updateStudent(id, request);
         return ApiResponse.success();

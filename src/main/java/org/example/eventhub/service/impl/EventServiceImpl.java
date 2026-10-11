@@ -86,6 +86,10 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
             throw new BusinessException(ErrorCode.EVENT_NOT_FOUND);
         }
 
+        //检查活动是否已发布
+        if (STATUS_PUBLISHED.equals(existing.getStatus())) {
+            throw new BusinessException(ErrorCode.CONFLICT, "已发布的活动不能删除");
+        }
         // 逻辑删除：@TableLogic 会自动把 SQL 从 DELETE 改成 UPDATE deleted=1
         this.removeById(id);
     }

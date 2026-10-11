@@ -3,12 +3,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/event_hub?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
-    # ${DB_PASSWORD:123456} 的含义：
+    # ${DB_PASSWORD} 的含义：
     #   先找环境变量 DB_PASSWORD，找到就用它；找不到就用冒号后面的默认值 123456。
     # 之前写成 ${DB_PASSWORD}（没有默认值）：环境变量没设置时，
     #   @ConfigurationProperties 绑定不会报错，而是把字面量 "${DB_PASSWORD}"
     #   当成密码发给 MySQL，于是报 Access denied ... (using password: YES)。
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD}
 
 mybatis-plus:
   # XML 映射文件的位置。注意必须是【目录】mapper/，

@@ -82,5 +82,4 @@
         WHERE e.id = #{eventId} AND e.deleted = 0
         GROUP BY e.id, e.title, e.capacity, e.available_slots
     </select>
-
 </mapper>

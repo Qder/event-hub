@@ -6,7 +6,6 @@ import org.example.eventhub.domain.Student;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
 import org.example.eventhub.dto.StudentUpdateRequest;
-import org.springframework.transaction.annotation.Transactional;
 
 public interface StudentService extends IService<Student> {
     /**
@@ -16,15 +15,7 @@ public interface StudentService extends IService<Student> {
      */
     Long createStudent(StudentCreateRequest studentCreateRequest);
 
-    /*
-    * 更新学生
-    * @param studentId 学生ID
-    * @param studentCreateRequest 学生创建请求
-    */
-
-    void updateStudent(Long studentId, StudentCreateRequest studentCreateRequest);
-
-    @Transactional(rollbackFor = Exception.class)
+    /** 更新学生姓名、电话和状态。 */
     void updateStudent(Long id, StudentUpdateRequest request);
 
     /*

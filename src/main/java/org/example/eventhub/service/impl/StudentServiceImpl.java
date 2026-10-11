@@ -3,6 +3,7 @@ package org.example.eventhub.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.example.eventhub.common.BusinessException;
 import org.example.eventhub.common.ErrorCode;
 import org.example.eventhub.domain.Student;
@@ -14,12 +15,15 @@ import org.example.eventhub.service.StudentService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
+@RequiredArgsConstructor
 @Service
 public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> implements StudentService {
 
+    private final PasswordEncoder passwordEncoder;
     /** 允许排序的字段白名单 */
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "studentNo", "name");
 
@@ -40,6 +44,7 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         student.setName(request.getName());
         student.setPhone(request.getPhone());
         student.setStatus(1);
+        student.setPassword(passwordEncoder.encode("123456"));//默认密码123456
         // createdAt / updatedAt 由 MyMetaObjectHandler 自动填充
         // deleted 由 MyBatis-Plus 逻辑删除默认填充 0
 
@@ -50,12 +55,6 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         }
         return student.getId();
     }
-
-    @Override
-    public void updateStudent(Long studentId, StudentCreateRequest studentCreateRequest) {
-
-    }
-
 
     @Transactional(rollbackFor = Exception.class)
     @Override
