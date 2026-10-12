@@ -14,6 +14,7 @@ import org.example.eventhub.dto.StudentUpdateRequest;
 import org.example.eventhub.mapper.StudentMapper;
 import org.example.eventhub.service.StudentService;
 import org.example.eventhub.util.JwtUtil;
+import org.example.eventhub.vo.CurrentUserVO;
 import org.example.eventhub.vo.LoginResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -169,5 +170,21 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         String token = jwtUtil.generateToken(student.getId(), student.getStudentNo());
 
         return new LoginResponse(token, student.getId(), student.getStudentNo(), student.getName());
+    }
+
+    @Override
+    public CurrentUserVO getCurrentUser(Long studentId) {
+        Student student = this.getById(studentId);
+        if (student == null) {
+            throw new BusinessException(ErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        CurrentUserVO vo = new CurrentUserVO();
+        vo.setId(student.getId());
+        vo.setStudentNo(student.getStudentNo());
+        vo.setName(student.getName());
+        vo.setPhone(student.getPhone());
+        vo.setStatus(student.getStatus());
+        return vo;
     }
 }

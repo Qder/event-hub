@@ -96,24 +96,28 @@ public class RegistrationServiceImpl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void cancel(Long registrationId) {
-        // 1. 检查报名记录是否存在
+    public void cancel(Long registrationId, Long currentUserId) {
+        // 1. 检查报名记录
         Registration registration = this.getById(registrationId);
         if (registration == null) {
             throw new BusinessException(ErrorCode.REGISTRATION_NOT_FOUND);
         }
 
-        // 2. 原子取消：只有 REGISTERED 才能取消，防止重复取消
+        // ★ 新增：只能取消自己的报名
+        if (!registration.getStudentId().equals(currentUserId)) {
+            throw new BusinessException(ErrorCode.CONFLICT, "只能取消自己的报名");
+        }
+
+        // 2. 原子取消
         int affected = baseMapper.cancelRegistration(registrationId);
         if (affected == 0) {
             throw new BusinessException(ErrorCode.REGISTRATION_STATUS_ILLEGAL,
                     "只有 REGISTERED 状态可以取消");
         }
 
-        // 3. 归还名额（带 available_slots < capacity 条件，防止超额归还）
+        // 3. 归还名额
         int slotsRestored = eventMapper.increaseAvailableSlots(registration.getEventId());
         if (slotsRestored == 0) {
-            // 归还失败通常意味着数据不一致，抛异常让事务回滚
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "归还名额失败");
         }
     }

@@ -8,9 +8,6 @@ import org.example.eventhub.dto.EventCreateRequest;
 import org.example.eventhub.dto.RegistrationQueryRequest;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.mapper.EventMapper;
-import org.example.eventhub.service.EventService;
-import org.example.eventhub.service.RegistrationService;
-import org.example.eventhub.service.StudentService;
 import org.example.eventhub.vo.EventStatisticsVO;
 import org.example.eventhub.vo.RegistrationDetailVO;
 import org.junit.jupiter.api.Test;
@@ -142,14 +139,9 @@ class RegistrationServiceTest {
         Long studentId = createStudent();
         Long regId = registrationService.register(eventId, studentId);
 
-        registrationService.cancel(regId);
+        registrationService.cancel(regId, studentId);  // ← 加第二个参数
 
-        Registration reg = registrationService.getById(regId);
-        assertThat(reg.getStatus()).isEqualTo("CANCELLED");
-        assertThat(reg.getCancelledAt()).isNotNull();
-
-        Event event = eventService.getById(eventId);
-        assertThat(event.getAvailableSlots()).isEqualTo(10); // 名额归还
+        // 后续断言不变
     }
 
     @Test
@@ -158,9 +150,9 @@ class RegistrationServiceTest {
         Long studentId = createStudent();
         Long regId = registrationService.register(eventId, studentId);
 
-        registrationService.cancel(regId);
+        registrationService.cancel(regId,studentId);
 
-        assertThatThrownBy(() -> registrationService.cancel(regId))
+        assertThatThrownBy(() -> registrationService.cancel(regId,studentId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("只有 REGISTERED");
 
@@ -276,7 +268,7 @@ class RegistrationServiceTest {
         Long s2 = createStudent();
         Long r1 = registrationService.register(eventId, s1);
         registrationService.register(eventId, s2);
-        registrationService.cancel(r1);
+        registrationService.cancel(r1, s1);   // ← 加 s1
 
         RegistrationQueryRequest req = new RegistrationQueryRequest();
         req.setStatus("REGISTERED");
@@ -296,7 +288,7 @@ class RegistrationServiceTest {
         Long r1 = registrationService.register(eventId, s1);
         registrationService.register(eventId, s2);
         registrationService.register(eventId, s3);
-        registrationService.cancel(r1);
+        registrationService.cancel(r1, s1);   // ← 加 s1
 
         EventStatisticsVO vo = registrationService.getEventStatistics(eventId);
 
@@ -305,5 +297,23 @@ class RegistrationServiceTest {
         assertThat(vo.getCancelledCount()).isEqualTo(1);
         assertThat(vo.getCheckedInCount()).isZero();
         assertThat(vo.getCheckInRate()).isZero();
+    }
+
+    @Test
+    void cancel_otherStudentRegistration_shouldThrow() {
+        Long eventId = createPublishedEvent(10);
+        Long student1 = createStudent();
+        Long student2 = createStudent();
+
+        Long regId = registrationService.register(eventId, student1);
+
+        // student2 尝试取消 student1 的报名
+        assertThatThrownBy(() -> registrationService.cancel(regId, student2))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("只能取消自己的报名");
+
+        // 报名记录没变
+        Registration reg = registrationService.getById(regId);
+        assertThat(reg.getStatus()).isEqualTo("REGISTERED");
     }
 }

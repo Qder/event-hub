@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.eventhub.common.ApiResponse;
+import org.example.eventhub.common.BusinessException;
+import org.example.eventhub.common.ErrorCode;
 import org.example.eventhub.domain.Student;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
@@ -13,6 +15,8 @@ import org.example.eventhub.service.RegistrationService;
 import org.example.eventhub.service.StudentService;
 import org.example.eventhub.vo.StudentRegistrationVO;
 import org.springframework.web.bind.annotation.*;
+import org.example.eventhub.common.UserContext;
+import org.example.eventhub.vo.CurrentUserVO;
 
 import java.util.List;
 

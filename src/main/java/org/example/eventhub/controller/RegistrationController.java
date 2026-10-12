@@ -1,14 +1,11 @@
 package org.example.eventhub.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.eventhub.common.ApiResponse;
-import org.example.eventhub.dto.RegistrationQueryRequest;
-import org.example.eventhub.dto.RegistrationRequest;
+import org.example.eventhub.common.BusinessException;
+import org.example.eventhub.common.ErrorCode;
+import org.example.eventhub.common.UserContext;
 import org.example.eventhub.service.RegistrationService;
-import org.example.eventhub.vo.EventStatisticsVO;
-import org.example.eventhub.vo.RegistrationDetailVO;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,24 +15,24 @@ public class RegistrationController {
 
     private final RegistrationService registrationService;
 
-    /** 学生报名活动 */
+    /** 学生报名活动：studentId 从 token 取 */
     @PostMapping("/events/{eventId}/registrations")
-    public ApiResponse<Long> register(@PathVariable Long eventId,
-                                      @Valid @RequestBody RegistrationRequest request) {
-        return ApiResponse.success(registrationService.register(eventId, request.getStudentId()));
+    public ApiResponse<Long> register(@PathVariable Long eventId) {
+        Long studentId = UserContext.getCurrentUserId();
+        if (studentId == null) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED, "未登录");
+        }
+        return ApiResponse.success(registrationService.register(eventId, studentId));
     }
 
-    /** 取消报名 */
+    /** 取消报名：只能取消自己的 */
     @PostMapping("/registrations/{id}/cancel")
     public ApiResponse<Void> cancel(@PathVariable Long id) {
-        registrationService.cancel(id);
-        return ApiResponse.success();
-    }
-
-    /** 学生签到 */
-    @PostMapping("/registrations/{id}/check-in")
-    public ApiResponse<Void> checkIn(@PathVariable Long id) {
-        registrationService.checkIn(id);
+        Long studentId = UserContext.getCurrentUserId();
+        if (studentId == null) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED, "未登录");
+        }
+        registrationService.cancel(id, studentId);   // 多传一个当前用户 id
         return ApiResponse.success();
     }
 }

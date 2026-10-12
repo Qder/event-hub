@@ -7,6 +7,7 @@ import org.example.eventhub.dto.LoginRequest;
 import org.example.eventhub.dto.StudentCreateRequest;
 import org.example.eventhub.dto.StudentQueryRequest;
 import org.example.eventhub.dto.StudentUpdateRequest;
+import org.example.eventhub.vo.CurrentUserVO;
 import org.example.eventhub.vo.LoginResponse;
 
 public interface StudentService extends IService<Student> {
@@ -49,4 +50,12 @@ public interface StudentService extends IService<Student> {
      * @return 登录响应（含 token）
      */
     LoginResponse login(LoginRequest request);
+
+    /**
+     * 获取当前登录用户信息
+     *
+     * @param studentId 当前用户 ID（从 ThreadLocal 取）
+     * @return 当前用户信息
+     */
+    CurrentUserVO getCurrentUser(Long studentId);
 }
